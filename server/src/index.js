@@ -23,8 +23,25 @@ app.get('/', (req, res) => {
   res.sendFile(__dirname + '/public/index.html');
 });
 
-io.on('connection', () => {
-  console.log('user connected');
+const users = {};
+
+io.on('connection', (socket) => {
+  socket.on('new-user', (name) => {
+    users[socket.id] = name;
+    socket.broadcast.emit(`user-connected`, name);
+  });
+
+  socket.on('send-chat-message', (mesg) => {
+    socket.broadcast.emit('chat-message', {
+      message: mesg,
+      name: users[socket.id],
+    });
+  });
+
+  socket.on('disconnect', () => {
+    socket.broadcast.emit(`user-disconnected`, users[socket.id]);
+    delete users[socket.id];
+  });
 });
 
 http.listen(PORT, () => {
